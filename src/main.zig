@@ -1,6 +1,8 @@
 const std = @import("std");
+
 const Display = @import("display.zig").Display;
 const Bitmap = @import("bitmap.zig").Bitmap;
+const Device = @import("device.zig").Device;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -10,6 +12,14 @@ pub fn main() !void {
         if (leaked == .leak) {
             @panic("memory leak");
         }
+    }
+
+    var device = try Device.create(allocator);
+    defer device.free();
+
+    if (!device.loadROM("./roms/blits.rom")) {
+        std.debug.print("failed to load chip8 rom\n", .{});
+        return;
     }
 
     var bitmap = try Bitmap.create(allocator, 64, 32);
