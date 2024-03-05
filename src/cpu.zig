@@ -199,29 +199,78 @@ pub const CPU = struct {
                     else => {},
                 }
             },
-            0x9000 => {},
-            0xA000 => {},
-            0xB000 => {},
-            0xC000 => {},
+            0x9000 => {
+                if (self.v[x] != self.v[y]) self.pc += 2;
+            },
+            0xA000 => {
+                self.i = (opcode & 0xFFF);
+            },
+            0xB000 => {
+                self.pc = (opcode & 0xFFF) + self.v[0];
+            },
+            // generate random number
+            0xC000 => {
+                var seed: u64 = 11111;
+                std.os.getrandom(std.mem.asBytes(&seed)) catch {};
+
+                var rnd = std.rand.DefaultPrng.init(seed);
+                var num = rnd.random().int(u8);
+
+                self.v[x] = num & (@as(u8, @truncate(opcode)) & 0xFF);
+            },
+            // todo
             0xD000 => {},
             0xE000 => {
                 switch (opcode & 0xFF) {
-                    0x9E => {},
-                    0xA1 => {},
+                    0x9E => {
+                        if (self.display.keys[self.v[x]]) self.pc += 2;
+                    },
+                    0xA1 => {
+                        if (!self.display.keys[self.v[x]]) self.pc += 2;
+                    },
                     else => {},
                 }
             },
             0xF000 => {
                 switch (opcode & 0xFF) {
-                    0x07 => {},
-                    0x0A => {},
-                    0x15 => {},
-                    0x18 => {},
-                    0x1E => {},
-                    0x29 => {},
-                    0x33 => {},
-                    0x55 => {},
-                    0x65 => {},
+                    0x07 => {
+                        self.v[x] = self.dtimer;
+                    },
+                    0x0A => {
+                        self.paused = true;
+                        self.paused_x = @as(u8, @truncate(x));
+                    },
+                    0x15 => {
+                        self.dtimer = self.v[x];
+                    },
+                    0x18 => {
+                        self.stimer = self.v[x];
+                    },
+                    0x1E => {
+                        self.i += self.v[x];
+                    },
+                    0x29 => {
+                        self.i = @as(u16, @intCast(self.v[x])) * 5;
+                    },
+                    0x33 => {
+                        self.memory.*[self.i + 0] = (self.v[x] / 100) % 10;
+                        self.memory.*[self.i + 1] = (self.v[x] / 10) % 10;
+                        self.memory.*[self.i + 2] = self.v[x] % 10;
+                    },
+                    0x55 => {
+                        var ri: u16 = 0;
+                        while (ri <= x) : (ri += 1) {
+                            self.memory.*[self.i + ri] = self.v[ri];
+                        }
+                        self.i += ri;
+                    },
+                    0x65 => {
+                        var ri: u16 = 0;
+                        while (ri <= x) : (ri += 1) {
+                            self.v[ri] = self.memory.*[self.i + ri];
+                        }
+                        self.i += ri;
+                    },
                     else => {},
                 }
             },
