@@ -19,12 +19,12 @@ pub const CPU = struct {
     paused_x: u8,
     speed: u8,
 
-    pub fn create(memory: *[]u8, bitmap: *Bitmap, display: Display) Self {
+    pub fn create(memory: *[]u8, bitmap: *Bitmap, display: *Display) Self {
         return Self{
             .memory = memory,
             .bitmap = bitmap,
             .display = display,
-            .px = 0x200,
+            .pc = 0x200,
             .i = 0,
             .dtimer = 0,
             .stimer = 0,
@@ -156,7 +156,7 @@ pub const CPU = struct {
                         self.v[0xF] = 0;
                     },
                     0x4 => {
-                        var sum: u32 = u32(@as(u32, self.v[x]) + @as(u32, self.v[y]));
+                        var sum: u32 = (@as(u32, self.v[x]) + @as(u32, self.v[y]));
                         self.v[x] = @as(u8, @truncate(sum));
 
                         self.v[0xF] = 0;
@@ -168,7 +168,7 @@ pub const CPU = struct {
 
                         self.v[x] = vX -% vY;
 
-                        self.v[0xFF] = 0;
+                        self.v[0xF] = 0;
                         if (vX > vY) self.v[0xF] = 1;
                     },
                     0x6 => {
@@ -218,8 +218,33 @@ pub const CPU = struct {
 
                 self.v[x] = num & (@as(u8, @truncate(opcode)) & 0xFF);
             },
-            // todo
-            0xD000 => {},
+            0xD000 => {
+                var width: u16 = 8; // ALL sprite are 8 wide
+                var height = (opcode & 0xF);
+
+                self.v[0xF] = 0;
+
+                var row: u8 = 0;
+                while (row < height) : (row += 1) {
+                    var sprite = self.memory.*[self.i + row];
+
+                    var col: u8 = 0;
+                    while (col < width) : (col += 1) {
+                        var px = self.v[x] % self.bitmap.width;
+                        var py = self.v[y] % self.bitmap.height;
+
+                        if (px + col >= self.bitmap.width) continue;
+                        if (py + row >= self.bitmap.height) continue;
+
+                        if ((sprite & 0x80) > 0) {
+                            if (self.bitmap.setPixel(px + col, py + row)) {
+                                self.v[0xF] = 1;
+                            }
+                        }
+                        sprite <<= 1;
+                    }
+                }
+            },
             0xE000 => {
                 switch (opcode & 0xFF) {
                     0x9E => {
