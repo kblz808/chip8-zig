@@ -18,7 +18,7 @@ pub fn main() !void {
     var device = try Device.create(allocator);
     defer device.free();
 
-    if (!device.loadROM("./roms/blits.rom")) {
+    if (!device.loadROM("./roms/blitz.rom")) {
         std.debug.print("failed to load chip8 rom\n", .{});
         return;
     }
