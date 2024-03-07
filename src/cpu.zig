@@ -218,8 +218,33 @@ pub const CPU = struct {
 
                 self.v[x] = num & (@as(u8, @truncate(opcode)) & 0xFF);
             },
-            // todo
-            0xD000 => {},
+            0xD000 => {
+                var width: u16 = 8; // ALL sprite are 8 wide
+                var height = (opcode & 0xF);
+
+                self.v[0xF] = 0;
+
+                var row: u8 = 0;
+                while (row < height) : (row += 1) {
+                    var sprite = self.memory.*[self.i + row];
+
+                    var col: u8 = 0;
+                    while (col < width) : (col += 1) {
+                        var px = self.v[x] % self.bitmap.width;
+                        var py = self.v[y] % self.bitmap.height;
+
+                        if (px + col >= self.bitmap.width) continue;
+                        if (py + row >= self.bitmap.height) continue;
+
+                        if ((sprite & 0x80) > 0) {
+                            if (self.bitmap.setPixel(px + col, py + row)) {
+                                self.v[0xF] = 1;
+                            }
+                        }
+                        sprite <<= 1;
+                    }
+                }
+            },
             0xE000 => {
                 switch (opcode & 0xFF) {
                     0x9E => {
